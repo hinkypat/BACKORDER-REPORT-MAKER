@@ -1,6 +1,15 @@
-# Back Order Report Generator
+# Back Order Report Generator - REV6
 
 A Python desktop application that automates the transformation of raw database exports into formatted Excel back order reports for management.
+
+## NEW in REV6
+- **Sort By Section**: Choose your preferred sorting method with checkboxes
+  - ORDER # (default)
+  - PCX DOCK
+  - SALESMAN NAME  
+  - DUE DATE
+- **Smart Sorting Logic**: Uses selected column if exactly one is checked, defaults to ORDER # otherwise
+- **Enhanced GUI**: Updated interface with improved instructions and feedback
 
 ## Features
 
@@ -30,7 +39,12 @@ The application requires Python 3.7 or higher and the following packages:
    ```bash
    pip install pandas openpyxl
    ```
-3. **Run the application**:
+3. **Run the REV6 application**:
+   ```bash
+   python daily_backorder_app.py
+   ```
+   
+   Or run the alternative interface:
    ```bash
    python main.py
    ```
@@ -39,13 +53,12 @@ The application requires Python 3.7 or higher and the following packages:
 
 ### Basic Operation
 
-1. **Launch the application** by running `python main.py`
-2. **Select input file**: Click "Browse" next to "Input Database Export File" and select your data file
-3. **Choose output directory**: Click "Browse" next to "Output Directory" to select where the report will be saved
-4. **Configure options** (optional):
-   - **Report Type**: Choose between Standard, Detailed, or Summary
-   - **Include Charts**: Enable/disable chart generation
-   - **Data Validation**: Enable/disable data validation checks
+1. **Launch the application** by running `python daily_backorder_app.py` (REV6 interface)
+2. **Select input file**: Click "Browse" next to "Raw Data File" and select your data file
+3. **Choose output location**: Click "Browse" next to "Save Report As" to select where the report will be saved
+4. **Select sorting preference**: Choose your preferred sorting method in the "Sort By" section:
+   - Check exactly one option for custom sorting
+   - Leave default (ORDER #) or select multiple to use ORDER # sorting
 5. **Generate report**: Click "Generate Report" to start processing
 
 ### Input File Requirements
