@@ -18,7 +18,7 @@ COLOR_KEYWORDS = {
 
 REPORT_HEADERS = [
     "ORDER #", "CUST PO", "ORDER DATE", "PCX DOCK", "ITEM NO", "MFG", "HIP ASA", "UNIT PRICE", "UNIT COST",
-    "CUST NAME", "SALESMAN NAME", "DUE DATE", "STOCK", "GP UNIT", "GP TOTAL", "TOTAL SALE", "COMMENTS"
+    "CUST NAME", "SALESMAN NAME", "DUE DATE", "STOCK", "P.O. ALLOC.", "GP UNIT", "GP TOTAL", "TOTAL SALE", "COMMENTS"
 ]
 
 def find_previous_report(history_dir="report_history"):
@@ -76,6 +76,7 @@ def main(
         "slsman_name": "SALESMAN NAME",
         "due_date": "DUE DATE",
         "from_stk": "STOCK",
+        "po_allc": "P.O. ALLOC.",  # Map po_allc to P.O. ALLOC. column
     }
     raw_df.columns = [c.strip().upper() for c in raw_df.columns]
     for k, v in col_map.items():

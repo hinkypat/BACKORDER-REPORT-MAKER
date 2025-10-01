@@ -120,11 +120,11 @@ class BackorderReportGenerator:
     HEADERS = [
         "ORDER #", "CUST PO", "ORDER DATE", "ITEM NO", "MFG", "SHIP ASAP",
         "UNIT PRICE", "UNIT COST", "CUST NAME", "SALESMAN NAME", "DUE DATE",
-        "STOCK", "GP UNIT", "GP TOTAL", "TOTAL SALE", "COMMENTS"
+        "STOCK", "P.O. ALLOC.", "GP UNIT", "GP TOTAL", "TOTAL SALE", "COMMENTS"
     ]
     
-    # Column widths in pixels (A through P) - B,D,E,I,N,O increased by 10%
-    COLUMN_WIDTHS = [54, 160, 80, 167, 54, 49, 75, 75, 256, 125, 80, 45, 75, 83, 83, 400]
+    # Column widths in pixels (A through Q) - B,D,E,I,N,O increased by 10%
+    COLUMN_WIDTHS = [54, 160, 80, 167, 54, 49, 75, 75, 256, 125, 80, 45, 45, 75, 83, 83, 400]
     
     # Legend configuration
     LEGEND_CONFIG = [
@@ -375,7 +375,8 @@ class BackorderReportGenerator:
         try:
             expected_cols = [
                 "order_no", "cust_po", "order_dt", "item_no", "manu_no", "ship_asap",
-                "unit_price", "unit_cost", "cust_name", "slsman_nam", "due_date", "from_stk"
+                "unit_price", "unit_cost", "cust_name", "slsman_nam", "due_date", "from_stk",
+                "po_allc"  # Added po_allc column for P.O. ALLOC.
             ]
             
             logger.info(f"Adding {len(data)} rows to worksheet")
@@ -449,17 +450,17 @@ class BackorderReportGenerator:
             logger.info(f"Adding formulas and formatting to {max_row - 1} data rows")
             
             for row in range(2, max_row + 1):
-                # Add formulas
-                ws[f"M{row}"] = f"=G{row}-H{row}"  # GP UNIT
-                ws[f"N{row}"] = f"=M{row}*L{row}"  # GP TOTAL
-                ws[f"O{row}"] = f"=L{row}*G{row}"  # TOTAL SALE
+                # Add formulas (adjusted for new P.O. ALLOC. column at M)
+                ws[f"N{row}"] = f"=G{row}-H{row}"  # GP UNIT (shifted from M to N)
+                ws[f"O{row}"] = f"=N{row}*L{row}"  # GP TOTAL (shifted from N to O, reference changed)
+                ws[f"P{row}"] = f"=L{row}*G{row}"  # TOTAL SALE (shifted from O to P)
                 
                 # Apply alignment
                 for col in range(1, len(self.HEADERS) + 1):
                     ws[f"{get_column_letter(col)}{row}"].alignment = Alignment(horizontal="right")
                 
-                # Apply currency formatting
-                for col in ["G", "H", "M", "N", "O"]:
+                # Apply currency formatting (updated to include N, O, P)
+                for col in ["G", "H", "N", "O", "P"]:
                     cell = ws[f"{col}{row}"]
                     cell.number_format = numbers.FORMAT_CURRENCY_USD_SIMPLE
                 
@@ -485,12 +486,12 @@ class BackorderReportGenerator:
             max_row = ws.max_row
             total_row = max_row + 3
             
-            # Add total formulas
-            ws[f"N{total_row}"] = f"=SUM(N2:N{max_row})"
-            ws[f"O{total_row}"] = f"=SUM(O2:O{max_row})"
+            # Add total formulas (adjusted for new column positions)
+            ws[f"O{total_row}"] = f"=SUM(O2:O{max_row})"  # GP TOTAL (shifted from N to O)
+            ws[f"P{total_row}"] = f"=SUM(P2:P{max_row})"  # TOTAL SALE (shifted from O to P)
             
             # Format totals
-            for col in ["N", "O"]:
+            for col in ["O", "P"]:
                 cell = ws[f"{col}{total_row}"]
                 cell.font = Font(bold=True)
                 cell.alignment = Alignment(horizontal="right")
