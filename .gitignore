@@ -1,9 +1,8 @@
-# Python cache files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
+*.so
 .Python
 build/
 develop-eggs/
@@ -20,54 +19,25 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Environments
-.env
-.venv
-env/
+# Virtual environments
 venv/
 ENV/
-env.bak/
-venv.bak/
+env/
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Project specific
-test_output/
-temp_files/
 *.log
-*.xlsx
-*.xls
-!sample_output.xlsx
+*.xlsx~
+report_history/
+backorder_error_log_*.txt
