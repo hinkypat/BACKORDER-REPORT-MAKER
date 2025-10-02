@@ -17,8 +17,8 @@ from backorder_generator import BackorderReportGenerator
 class BackorderReportApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Daily Backorder Report Generator")
-        self.root.geometry("700x500")
+        self.root.title("Daily Backorder Report Generator - REV6")
+        self.root.geometry("700x600")
         self.root.resizable(True, True)
         
         # Variables
@@ -26,6 +26,12 @@ class BackorderReportApp:
         self.output_file_path = tk.StringVar()
         self.progress_var = tk.DoubleVar()
         self.status_var = tk.StringVar(value="Ready to generate report")
+        
+        # Sort By variables
+        self.sort_by_order = tk.BooleanVar(value=True)  # Default to ORDER #
+        self.sort_by_pcx_dock = tk.BooleanVar(value=False)
+        self.sort_by_salesman = tk.BooleanVar(value=False)
+        self.sort_by_due_date = tk.BooleanVar(value=False)
         
         self.setup_gui()
         
@@ -67,21 +73,33 @@ class BackorderReportApp:
         save_btn = ttk.Button(file_frame, text="Browse", command=self.browse_save_location)
         save_btn.grid(row=1, column=2, pady=5)
         
+        # Sort By section
+        sort_frame = ttk.LabelFrame(main_frame, text="Sort By", padding="10")
+        sort_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        
+        ttk.Label(sort_frame, text="Select sorting criteria (choose exactly one, defaults to ORDER # if none or multiple selected):").grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
+        
+        ttk.Checkbutton(sort_frame, text="ORDER #", variable=self.sort_by_order).grid(row=1, column=0, sticky="w", padx=(0, 20))
+        ttk.Checkbutton(sort_frame, text="PCX DOCK", variable=self.sort_by_pcx_dock).grid(row=1, column=1, sticky="w", padx=(0, 20))
+        ttk.Checkbutton(sort_frame, text="SALESMAN NAME", variable=self.sort_by_salesman).grid(row=1, column=2, sticky="w", padx=(0, 20))
+        ttk.Checkbutton(sort_frame, text="DUE DATE", variable=self.sort_by_due_date).grid(row=1, column=3, sticky="w")
+        
         # Info section
         info_frame = ttk.LabelFrame(main_frame, text="Instructions", padding="10")
-        info_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        info_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         
         info_text = """1. Click 'Browse' next to 'Raw Data File' to select your daily data file (.xls or .xlsx)
 2. Click 'Browse' next to 'Save Report As' to choose where to save the report
-3. Click 'Generate Report' to create the backorder report
-4. Military orders (Manuel Ortega + DLA/DFAS/NAVSUP customers) and Commercial orders will be separated"""
+3. Select your preferred sorting criteria in the 'Sort By' section above
+4. Click 'Generate Report' to create the backorder report
+5. Military orders (Manuel Ortega + DLA/DFAS/NAVSUP customers) and Commercial orders will be separated"""
         
         info_label = ttk.Label(info_frame, text=info_text, justify="left", wraplength=650)
         info_label.grid(row=0, column=0, sticky="w")
         
         # Progress section
         progress_frame = ttk.LabelFrame(main_frame, text="Progress", padding="10")
-        progress_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        progress_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         progress_frame.columnconfigure(0, weight=1)
         
         # Progress bar
@@ -94,7 +112,7 @@ class BackorderReportApp:
         
         # Output section
         output_frame = ttk.LabelFrame(main_frame, text="Output", padding="10")
-        output_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        output_frame.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         output_frame.columnconfigure(0, weight=1)
         output_frame.rowconfigure(0, weight=1)
         
@@ -108,7 +126,7 @@ class BackorderReportApp:
         
         # Button section
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=5, column=0, columnspan=3, pady=20)
+        button_frame.grid(row=6, column=0, columnspan=3, pady=20)
         
         self.generate_btn = ttk.Button(button_frame, text="Generate Report", 
                                      command=self.start_processing, style="Accent.TButton")
@@ -129,7 +147,7 @@ class BackorderReportApp:
         default_output = f"BACKORDER REPORT {datetime.now().strftime('%m%d%y')}.xlsx"
         self.output_file_path.set(default_output)
         
-        main_frame.rowconfigure(4, weight=1)
+        main_frame.rowconfigure(5, weight=1)
         
     def browse_save_location(self):
         """Browse for output file save location"""
@@ -198,21 +216,44 @@ class BackorderReportApp:
         processing_thread.daemon = True
         processing_thread.start()
         
+    def get_sort_column(self):
+        """Determine which column to sort by based on checkboxes."""
+        selected_sorts = []
+        
+        if self.sort_by_order.get():
+            selected_sorts.append(("ORDER #", "order_no"))
+        if self.sort_by_pcx_dock.get():
+            selected_sorts.append(("PCX DOCK", "pcx_dock"))  # Note: this column may not exist in current data
+        if self.sort_by_salesman.get():
+            selected_sorts.append(("SALESMAN NAME", "slsman_nam"))
+        if self.sort_by_due_date.get():
+            selected_sorts.append(("DUE DATE", "due_date"))
+        
+        # If exactly one is selected, use it; otherwise default to ORDER #
+        if len(selected_sorts) == 1:
+            return selected_sorts[0]
+        else:
+            return ("ORDER #", "order_no")
+    
     def process_report(self):
         """Process the report generation"""
         try:
             self.log_message("Starting report generation...")
             self.update_progress(10, "Initializing...")
             
-            # Create generator instance
-            generator = BackorderReportGenerator(self.input_file_path.get())
+            # Determine sort column
+            sort_display, sort_column = self.get_sort_column()
+            self.log_message(f"Sorting by: {sort_display}")
+            
+            # Create generator instance with sort column
+            generator = BackorderReportGenerator(self.input_file_path.get(), sort_column=sort_column)
             
             self.update_progress(20, "Validating input file...")
             self.log_message(f"Processing file: {self.input_file_path.get()}")
             
             self.update_progress(50, "Generating report...")
             
-            # Generate the report using your existing code
+            # Generate the report using your existing code with sort preference
             output_file = generator.generate_report(self.output_file_path.get())
             
             self.update_progress(100, "Report generated successfully!")
@@ -223,7 +264,8 @@ class BackorderReportApp:
             messagebox.showinfo("Success", 
                               f"Report generated successfully!\n\n"
                               f"File: {output_file}\n"
-                              f"Location: {os.path.abspath(output_file)}")
+                              f"Location: {os.path.abspath(output_file)}\n"
+                              f"Sorted by: {sort_display}")
             
         except Exception as e:
             error_msg = f"Error generating report: {str(e)}"
