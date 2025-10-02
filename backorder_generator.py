@@ -134,8 +134,9 @@ class BackorderReportGenerator:
         ("ORANGE", "SCHEDULED ORDER", "FFA500")
     ]
     
-    def __init__(self, input_file: str):
+    def __init__(self, input_file: str, sort_column: str = "order_no"):
         self.input_file = input_file
+        self.sort_column = sort_column
         self.error_logger = TripleVerbosityErrorLogger()
         
     def validate_input_file(self) -> None:
@@ -269,32 +270,51 @@ class BackorderReportGenerator:
             raise
 
     def sort_dataframes(self, military_df: pd.DataFrame, commercial_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Sort dataframes by ORDER # (smallest to largest)."""
+        """Sort dataframes by the configured sort column."""
         try:
             original_military_shape = military_df.shape
             original_commercial_shape = commercial_df.shape
             
-            if not military_df.empty and "order_no" in military_df.columns:
-                # Check for non-numeric order numbers
-                non_numeric_orders = military_df[pd.to_numeric(military_df["order_no"], errors='coerce').isna()]
-                if not non_numeric_orders.empty:
-                    logger.warning(f"Found {len(non_numeric_orders)} non-numeric order numbers in military data")
-                
-                military_df = military_df.sort_values(by="order_no")
-                logger.info(f"Military data sorted by order_no: {len(military_df)} rows")
-            elif not military_df.empty:
-                logger.warning("order_no column not found in military data - skipping sort")
+            # Map display names to column names for sorting
+            sort_column_map = {
+                "order_no": "order_no",
+                "slsman_nam": "slsman_nam", 
+                "due_date": "due_date",
+                "pcx_dock": "pcx_dock"  # This may not exist in current data
+            }
             
-            if not commercial_df.empty and "order_no" in commercial_df.columns:
-                # Check for non-numeric order numbers
-                non_numeric_orders = commercial_df[pd.to_numeric(commercial_df["order_no"], errors='coerce').isna()]
-                if not non_numeric_orders.empty:
-                    logger.warning(f"Found {len(non_numeric_orders)} non-numeric order numbers in commercial data")
+            actual_sort_column = sort_column_map.get(self.sort_column, "order_no")
+            logger.info(f"Sorting dataframes by column: {actual_sort_column}")
+            
+            if not military_df.empty and actual_sort_column in military_df.columns:
+                if actual_sort_column == "order_no":
+                    # Check for non-numeric order numbers
+                    non_numeric_orders = military_df[pd.to_numeric(military_df[actual_sort_column], errors='coerce').isna()]
+                    if not non_numeric_orders.empty:
+                        logger.warning(f"Found {len(non_numeric_orders)} non-numeric order numbers in military data")
+                elif actual_sort_column == "due_date":
+                    # Ensure due_date is datetime for proper sorting
+                    military_df[actual_sort_column] = pd.to_datetime(military_df[actual_sort_column], errors="coerce")
                 
-                commercial_df = commercial_df.sort_values(by="order_no")
-                logger.info(f"Commercial data sorted by order_no: {len(commercial_df)} rows")
+                military_df = military_df.sort_values(by=actual_sort_column)
+                logger.info(f"Military data sorted by {actual_sort_column}: {len(military_df)} rows")
+            elif not military_df.empty:
+                logger.warning(f"{actual_sort_column} column not found in military data - skipping sort")
+            
+            if not commercial_df.empty and actual_sort_column in commercial_df.columns:
+                if actual_sort_column == "order_no":
+                    # Check for non-numeric order numbers
+                    non_numeric_orders = commercial_df[pd.to_numeric(commercial_df[actual_sort_column], errors='coerce').isna()]
+                    if not non_numeric_orders.empty:
+                        logger.warning(f"Found {len(non_numeric_orders)} non-numeric order numbers in commercial data")
+                elif actual_sort_column == "due_date":
+                    # Ensure due_date is datetime for proper sorting
+                    commercial_df[actual_sort_column] = pd.to_datetime(commercial_df[actual_sort_column], errors="coerce")
+                
+                commercial_df = commercial_df.sort_values(by=actual_sort_column)
+                logger.info(f"Commercial data sorted by {actual_sort_column}: {len(commercial_df)} rows")
             elif not commercial_df.empty:
-                logger.warning("order_no column not found in commercial data - skipping sort")
+                logger.warning(f"{actual_sort_column} column not found in commercial data - skipping sort")
             
             return military_df, commercial_df
 
@@ -302,10 +322,10 @@ class BackorderReportGenerator:
             additional_info = {
                 "military_df_shape": original_military_shape,
                 "commercial_df_shape": original_commercial_shape,
-                "military_has_order_no": "order_no" in military_df.columns if not military_df.empty else "Empty DataFrame",
-                "commercial_has_order_no": "order_no" in commercial_df.columns if not commercial_df.empty else "Empty DataFrame",
-                "military_order_no_sample": military_df["order_no"].head().tolist() if not military_df.empty and "order_no" in military_df.columns else "N/A",
-                "commercial_order_no_sample": commercial_df["order_no"].head().tolist() if not commercial_df.empty and "order_no" in commercial_df.columns else "N/A"
+                "sort_column": self.sort_column,
+                "actual_sort_column": actual_sort_column if 'actual_sort_column' in locals() else "N/A",
+                "military_has_sort_column": actual_sort_column in military_df.columns if not military_df.empty and 'actual_sort_column' in locals() else "Unknown",
+                "commercial_has_sort_column": actual_sort_column in commercial_df.columns if not commercial_df.empty and 'actual_sort_column' in locals() else "Unknown"
             }
             self.error_logger.log_error("DataFrame Sorting", e, additional_info)
             raise
@@ -595,10 +615,14 @@ class BackorderReportGenerator:
             self.error_logger.log_error(f"Sheet Creation - {title}", e, additional_info)
             raise
     
-    def generate_report(self, output_file_path: str = None) -> str:
+    def generate_report(self, output_file_path: str = None, sort_column: str = None) -> str:
         """Generate the complete backorder report."""
         try:
-            logger.info("Starting backorder report generation")
+            # Update sort column if provided
+            if sort_column:
+                self.sort_column = sort_column
+                
+            logger.info(f"Starting backorder report generation with sort column: {self.sort_column}")
             
             self.validate_input_file()
             
